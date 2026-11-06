@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  # Branches other than main get tested through their pull request, so a push
+  # to an open PR runs CI once, not twice.
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.13", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      # No cache: there are no dependencies to cache, and with no lockfile
+      # setup-uv warns that its cache key never changes.
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: false
+      # The login-shell test runs the bootstrap through every shell it finds.
+      - name: Install extra login shells
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zsh fish tcsh
+      - name: Run tests
+        run: uv run --python ${{ matrix.python }} -m unittest discover -s tests -t . -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: false
+      - run: uvx ruff check .
+      - run: uvx ruff format --check .

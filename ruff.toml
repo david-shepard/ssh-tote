@@ -1,0 +1,5 @@
+target-version = "py311"
+
+[lint]
+# pycodestyle, pyflakes, isort, pep8-naming, bugbear, simplify, pyupgrade, complexity
+select = ["E", "F", "W", "I", "N", "B", "SIM", "UP", "C90"]
