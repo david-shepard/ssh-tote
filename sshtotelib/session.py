@@ -8,6 +8,7 @@ from .payload import Payload
 from .rcfile import (
     DOTFILES_SECTION,
     LOGIN_SECTION,
+    SELF_DELETE_SECTION,
     alias_section,
     command_section,
     environment_section,
@@ -24,6 +25,7 @@ class Session:
 
     def rcfile(self):
         sections = [
+            SELF_DELETE_SECTION,
             LOGIN_SECTION,
             environment_section(self.items, self.local_home),
             alias_section(self.items),
