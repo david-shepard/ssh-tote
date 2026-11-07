@@ -60,6 +60,20 @@ passed `-t` or `-T` yourself.
 
 ## What gets sent
 
+> [!WARNING]
+> **Don't send secrets on a machine you share.** The payload is compressed and
+> base64-encoded, not encrypted, and it travels as a command-line argument to
+> `ssh`. Anyone who can list processes can decode it:
+>
+> * **On your machine**, for as long as the `ssh` process runs, so for the whole
+>   session.
+> * **On the server**, while the payload is being unpacked. That's brief, but a
+>   process watcher can catch it. Under a fish or tcsh login shell it lasts the
+>   whole session.
+>
+> Anything that records commands can keep a copy too, such as `ssh -v` output or
+> command auditing on the server. Check what you're sending with `--print`.
+
 **Environment variables:** only the ones you list in the `env` setting (see
 [Settings](#settings)) or tick in the TUI. Nothing else leaves your machine, so
 tokens and passwords stay home unless you name them. Values containing your
@@ -90,7 +104,19 @@ setup:
 
 **Dotfiles dir** (optional, `--dir` or the `dir` setting): shipped as-is,
 except names starting with `.git`, `README` or `LICENSE`, and a file named
-`ssh-tote`. Symlinks are followed.
+`ssh-tote`.
+
+Symlinks aren't supported. A symlink inside the dir, whether it points to a file
+or a directory, isn't sent, and ssh-tote prints a warning naming it just before
+connecting (use `--print` to see these without connecting). To send a linked
+file, copy it into the dir. The dir you pass can itself be a symlink.
+
+> [!WARNING]
+> ssh-tote doesn't check a dotfiles dir for sensitive files, so check it before
+> you ship it. Anything in it is copied to the server, including `.ssh`, `.aws`,
+> `.gnupg`, `.env` files and private keys. The exclusions above only apply at
+> the top level, so a nested `.git` dir is sent along with any tokens in its
+> config.
 
 The whole payload has to fit in one command-line argument on the server, so
 it's capped at about 117 KiB. If you go over, ssh-tote refuses to connect; trim
@@ -107,9 +133,11 @@ if a dotfiles dir was shipped, puts `$SSHHOME/bin` on `PATH` and sources
 
 Other users on the server can read any process's command line, so once the
 payload is unpacked the bootstrap replaces itself with a short start script
-and the payload drops out of the process list. If your login shell on the
-server is fish or tcsh, that shell keeps its own copy of the command line for
-the whole session, so don't send secrets there.
+and the payload drops out of the server's process list. It's still exposed
+until then, and on your own machine for the whole session (see the warning under
+[What gets sent](#what-gets-sent)). If your login shell on the server is fish or
+tcsh, that shell keeps its own copy of the command line for the whole session,
+so don't send secrets there.
 
 Remotely these are set:
 

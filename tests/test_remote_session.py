@@ -92,3 +92,15 @@ class DotfilesDirTest(RemoteSessionTestCase):
         command = 'dottool; echo "D=$FROM_DIR"; ls -A "$SSHHOME"'
         output = self.run_remote("/bin/sh", command, self.dotfiles).stdout.splitlines()
         self.assertEqual(output[-4:], ["dottool-ran", "D=yes", ".bashrc", "bin"])
+
+    def test_symlinks_dont_reach_the_server(self):
+        (self.dotfiles / "link").symlink_to(".bashrc")
+        command = 'ls -A "$SSHHOME"'
+        output = self.run_remote("/bin/sh", command, self.dotfiles).stdout.splitlines()
+        self.assertEqual(output[-2:], [".bashrc", "bin"])
+
+    def test_hard_links_unpack_as_regular_files(self):
+        (self.dotfiles / "copy").hardlink_to(self.dotfiles / ".bashrc")
+        command = 'cat "$SSHHOME/copy"'
+        output = self.run_remote("/bin/sh", command, self.dotfiles).stdout.splitlines()
+        self.assertEqual(output[-1:], ["export FROM_DIR=yes"])

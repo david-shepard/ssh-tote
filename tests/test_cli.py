@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from sshtotelib.cli import EXIT_USAGE, Paths, main
+from sshtotelib.session import Session
 
 
 def run_main(argv, environ):
@@ -48,3 +49,25 @@ class MainTest(unittest.TestCase):
     def test_unsupported_shell_warns_and_continues(self):
         _, _, stderr = run_main(["--print", "box"], self.environ)
         self.assertIn("can't read aliases from false", stderr)
+
+    def _dotfiles_with_symlink(self):
+        dotfiles = Path(self.environ["HOME"], "dots")
+        dotfiles.mkdir()
+        (dotfiles / "link").symlink_to("/nonexistent/target")
+        return dotfiles
+
+    def test_user_is_told_symlinks_arent_supported(self):
+        dotfiles = self._dotfiles_with_symlink()
+        exit_code, _, stderr = run_main(
+            ["--print", "--no-aliases", "--dir", str(dotfiles), "box"], self.environ
+        )
+        self.assertEqual(exit_code, 0)
+        self.assertIn("ssh-tote: not sending link", stderr)
+        self.assertIn("symlinks aren't supported", stderr)
+
+    def test_rebuilding_the_bootstrap_stays_quiet_for_the_tui(self):
+        dotfiles = self._dotfiles_with_symlink()
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            Session([], "", dotfiles).bootstrap()
+        self.assertEqual(stderr.getvalue(), "")

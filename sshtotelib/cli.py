@@ -67,7 +67,8 @@ def _connect(options, paths, environ, usage):
     if host is None:
         return EXIT_NOT_CONNECTED
 
-    bootstrap = session.bootstrap()
+    # Only here: the TUI rebuilds the bootstrap as you tick, under curses.
+    bootstrap = session.bootstrap(warn=_warn)
     if bootstrap.too_large:
         return _fail(_too_large_message(bootstrap), EXIT_NOT_CONNECTED)
     ssh_command = ["ssh", *_tty_options(options), *options.ssh_args, host]
