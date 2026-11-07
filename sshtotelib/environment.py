@@ -28,7 +28,7 @@ LOCAL_ONLY_PREFIXES = (
     "_ZSH", "__",
 )
 # fmt: on
-PORTABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+PORTABLE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def collect_environment(environ):
@@ -39,4 +39,4 @@ def collect_environment(environ):
 
 def is_portable(name):
     is_local_only = name in LOCAL_ONLY_VARIABLES or name.startswith(LOCAL_ONLY_PREFIXES)
-    return bool(PORTABLE_NAME.match(name)) and not is_local_only
+    return bool(PORTABLE_NAME.fullmatch(name)) and not is_local_only

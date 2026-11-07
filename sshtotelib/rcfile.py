@@ -45,8 +45,9 @@ def environment_section(items, local_home):
 
 
 def alias_section(items):
+    # The name is quoted too: zsh allows almost anything in one, even `;`.
     lines = [
-        f"alias {item.name}={shlex.quote(item.value)}"
+        f"alias {shlex.quote(item.name + '=' + item.value)}"
         for item in selected_of_kind(items, Kind.ALIAS)
     ]
     return _section("Aliases from your local shell", lines)

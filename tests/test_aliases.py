@@ -35,6 +35,29 @@ class ParseAliasListingTest(unittest.TestCase):
         expected = {"..": "cd ..", "multi": "echo one\necho two", "q": "echo 'hi'"}
         self.assertEqual(parse_alias_listing(BASH_LISTING), expected)
 
+    def test_names_no_shell_could_define_are_dropped(self):
+        unportable = [
+            "x;touch>injected;y",
+            "x|y",
+            "x&y",
+            "x(y",
+            "x)y",
+            "x<y",
+            "x>y",
+            "x\x1by",
+            "x\n",
+        ]
+        for name in unportable:
+            with self.subTest(name=name):
+                self.assertEqual(parse_alias_listing(f"alias '{name}'=true\n"), {})
+
+    def test_unusual_but_valid_names_are_kept(self):
+        # oh-my-zsh defines `gc!`, `1` and `...`; `?` is a popular shortcut.
+        for name in ("gc!", "g+", "?", "...", "_", "1", "git-svn", "a:b", "@x", "ñ"):
+            with self.subTest(name=name):
+                listing = f"alias '{name}'=true\n"
+                self.assertEqual(parse_alias_listing(listing), {name: "true"})
+
 
 class AliasItemsTest(unittest.TestCase):
     ALIASES = {"ll": "ls -l", "gco": "git checkout", "which-command": "whence"}
@@ -60,3 +83,17 @@ class CaptureAliasesTest(unittest.TestCase):
                 aliases, functions = capture_aliases(path, environ)
                 self.assertEqual(aliases["history"], "my_func")
                 self.assertIn("my_func", functions)
+
+    def test_real_shell_listing_keeps_valid_names_and_drops_hostile_ones(self):
+        for shell, rc_file in self.RC_FILES.items():
+            path = shutil.which(shell)
+            if not path:
+                continue
+            with self.subTest(shell=shell), tempfile.TemporaryDirectory() as home:
+                Path(home, rc_file).write_text(
+                    "alias 'x;touch>injected;y=true'\nalias 'gc!=git commit'\n"
+                )
+                environ = {"HOME": home, "PATH": os.environ["PATH"]}
+                aliases, _ = capture_aliases(path, environ)
+                self.assertEqual(aliases.get("gc!"), "git commit")
+                self.assertNotIn("x;touch>injected;y", aliases)

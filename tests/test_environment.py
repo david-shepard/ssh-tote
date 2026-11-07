@@ -1,6 +1,6 @@
 import unittest
 
-from sshtotelib.environment import collect_environment
+from sshtotelib.environment import collect_environment, is_portable
 
 ENVIRON = {
     "PATH": "/bin",
@@ -21,3 +21,6 @@ class CollectEnvironmentTest(unittest.TestCase):
         self.assertEqual(
             names, ["AWS_PROFILE", "DB_PASSWORD", "EDITOR", "GITHUB_TOKEN"]
         )
+
+    def test_trailing_newline_makes_a_name_unportable(self):
+        self.assertFalse(is_portable("EDITOR\n"))

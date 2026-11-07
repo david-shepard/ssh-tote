@@ -88,8 +88,9 @@ in the TUI or by `env = ["*"]`: `PATH`, `HOME`, `USER`, `SHELL`, `TERM`,
 **Aliases:** only the ones you list in the `aliases` setting or tick in the
 TUI. To find them, ssh-tote runs `$SHELL -ic 'alias -L'` (zsh) or `'alias -p'`
 (bash) so your rc files load, and offers what it prints. It skips zsh global and
-suffix aliases (bash can't express them), aliases starting with `!` and aliases
-named `ssh`, `sshrc`, `ssh-tote`, `run-help` and `which-command`. Aliases that call one of your shell
+suffix aliases (bash can't express them), aliases starting with `!`, aliases
+whose names contain shell metacharacters or control characters (zsh allows them,
+bash doesn't), and aliases named `ssh`, `sshrc`, `ssh-tote`, `run-help` and `which-command`. Aliases that call one of your shell
 functions (like oh-my-zsh's `history=omz_history`) start unticked even if
 `aliases` lists them, because functions aren't sent and the alias would fail on
 the server; tick them in the TUI if your dotfiles dir defines the function
