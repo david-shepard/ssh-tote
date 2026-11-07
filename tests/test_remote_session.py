@@ -1,6 +1,7 @@
 """Runs the real bootstrap locally, through each login shell ssh might hit."""
 
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -104,3 +105,18 @@ class DotfilesDirTest(RemoteSessionTestCase):
         command = 'cat "$SSHHOME/copy"'
         output = self.run_remote("/bin/sh", command, self.dotfiles).stdout.splitlines()
         self.assertEqual(output[-1:], ["export FROM_DIR=yes"])
+
+
+class AliasNameTest(RemoteSessionTestCase):
+    def test_unusual_name_and_tricky_value_survive_the_trip(self):
+        value = "echo " + shlex.quote(TRICKY_VALUE)
+        self.items.append(Item(Kind.ALIAS, "gc!", value))
+        output = self.run_remote("/bin/sh", "gc!").stdout.splitlines()
+        self.assertEqual(output[-1:], [TRICKY_VALUE])
+
+    def test_hostile_name_runs_nothing_and_the_session_carries_on(self):
+        marker = Path(self.home, "injected")
+        self.items.append(Item(Kind.ALIAS, "x;:>$HOME/injected;y", "true"))
+        output = self.run_remote("/bin/sh", "hello").stdout.splitlines()
+        self.assertFalse(marker.exists())
+        self.assertEqual(output[-1:], ["hello-from-alias"])

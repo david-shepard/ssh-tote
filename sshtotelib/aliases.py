@@ -21,8 +21,11 @@ FUNCTIONS_MARKER = "__SSH_TOTE_FUNCTIONS__"
 
 # zsh global (-g) and suffix (-s) aliases have no bash equivalent.
 UNPORTABLE_FLAGS = frozenset({"-g", "-s"})
+# Whitespace, quotes, shell metacharacters and control characters: zsh allows
+# them in a name, bash doesn't.
+UNPORTABLE_CHARS = r"\s='\"\\$`/|&;()<>\x00-\x1f\x7f"
 # A leading `!` isn't portable: it would read as an exception in the config.
-PORTABLE_NAME = re.compile(r"^[^\s='\"\\$`/!-][^\s='\"\\$`/]*$")
+PORTABLE_NAME = re.compile(rf"[^{UNPORTABLE_CHARS}!-][^{UNPORTABLE_CHARS}]*")
 # zsh helpers and aliases that would point back at the local tooling.
 REMOTE_UNSAFE_NAMES = frozenset(
     {"run-help", "which-command", "ssh", "sshrc", "ssh-tote"}
@@ -81,7 +84,7 @@ def parse_alias_listing(text):
     aliases = {}
     for flags, definition in _alias_statements(split_words(text)):
         name, _, value = definition.partition("=")
-        if PORTABLE_NAME.match(name) and flags.isdisjoint(UNPORTABLE_FLAGS):
+        if PORTABLE_NAME.fullmatch(name) and flags.isdisjoint(UNPORTABLE_FLAGS):
             aliases[name] = value
     return aliases
 
