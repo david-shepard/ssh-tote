@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v7
       # No cache: there are no dependencies to cache, and with no lockfile
       # setup-uv warns that its cache key never changes.
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: false
       # The login-shell test runs the bootstrap through every shell it finds.
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: false
       - run: uvx ruff check .
