@@ -24,14 +24,17 @@ class Payload:
     rcfile: str
     dotfiles_dir: Path | None = None
 
-    def encode(self):
-        """Base64 of a tar.gz holding `rc`, `start` and any dotfiles as `dir/`."""
+    def encode(self, warn=lambda message: None):
+        """Base64 of a tar.gz holding `rc`, `start` and any dotfiles as `dir/`.
+
+        warn(message) hears about every symlink left out of the dotfiles.
+        """
         buffer = io.BytesIO()
-        with tarfile.open(fileobj=buffer, mode="w:gz", dereference=True) as archive:
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
             _add_text(archive, RCFILE_NAME, self.rcfile)
             _add_text(archive, START_NAME, START_SCRIPT)
             if self.dotfiles_dir:
-                _add_dotfiles(archive, self.dotfiles_dir, buffer)
+                _add_dotfiles(archive, self.dotfiles_dir, buffer, warn)
         return base64.b64encode(buffer.getvalue()).decode()
 
 
@@ -43,17 +46,24 @@ def _add_text(archive, name, text):
     archive.addfile(info, io.BytesIO(data))
 
 
-def _add_dotfiles(archive, directory, buffer):
-    def skip_once_too_large(info):
+def _add_dotfiles(archive, directory, buffer, warn):
+    def keep(info):
+        if info.issym():
+            name = info.name.removeprefix(f"{DOTFILES_NAME}/")
+            warn(
+                f"not sending {name} -> {info.linkname}: "
+                "symlinks aren't supported in a dotfiles dir"
+            )
+            return None
         # The bootstrap will be refused anyway; don't read a huge dir to the end.
-        return (
-            None if _compressed_size(archive, buffer) > MAX_COMPRESSED_BYTES else info
-        )
+        if _compressed_size(archive, buffer) > MAX_COMPRESSED_BYTES:
+            return None
+        return info
 
     for entry in sorted(directory.iterdir()):
         if not SKIPPED_DOTFILES.match(entry.name):
             arcname = f"{DOTFILES_NAME}/{entry.name}"
-            archive.add(str(entry), arcname=arcname, filter=skip_once_too_large)
+            archive.add(str(entry), arcname=arcname, filter=keep)
 
 
 def _compressed_size(archive, buffer):

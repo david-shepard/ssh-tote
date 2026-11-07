@@ -34,6 +34,6 @@ class Session:
             sections.append(command_section(self.command))
         return join_sections(sections)
 
-    def bootstrap(self):
+    def bootstrap(self, warn=lambda message: None):
         payload = Payload(self.rcfile(), self.dotfiles_dir)
-        return Bootstrap.for_payload(payload.encode())
+        return Bootstrap.for_payload(payload.encode(warn))
