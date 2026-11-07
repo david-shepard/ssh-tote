@@ -146,6 +146,15 @@ Remotely these are set:
 | `SSH_TOTE_HOME` | Temporary dir holding the payload; removed on logout. |
 | `SSHHOME` | `$SSH_TOTE_HOME/dir`, the shipped dotfiles dir (same layout as sshrc). |
 
+The rcfile holding your variables and aliases deletes itself as soon as the
+shell opens it, before any profile runs. Your variables then live in the
+environment of your shell and the processes it starts, where your user and root
+can still read them. Everything else in the temp dir, including any dotfiles dir,
+stays until you log out. If the session is killed outright, such as by `kill -9`
+or the out-of-memory killer, that cleanup doesn't run and those files stay behind.
+If the server has no `/dev/shm`, the payload is unpacked to `$TMPDIR` or `/tmp`,
+which may be on disk, so deleted files aren't guaranteed to be unrecoverable.
+
 ## Settings
 
 Defaults live in `~/.config/ssh-tote/config.toml` (or

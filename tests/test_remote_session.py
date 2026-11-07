@@ -76,6 +76,51 @@ class LoginShellTest(RemoteSessionTestCase):
         bootstraps = [args for args in processes if args.startswith("sh -c d=")]
         self.assertEqual(bootstraps, [])
 
+    def test_rcfile_deletes_itself_but_its_variables_stay(self):
+        command = 'echo "T=$SSH_TOTE_TEST"; ls -A "$SSH_TOTE_HOME"'
+        output = self.run_remote("/bin/sh", command).stdout.splitlines()
+        self.assertEqual(output[-2:], [f"T={TRICKY_VALUE}", "start"])
+
+    def test_rcfile_is_gone_before_the_profile_runs(self):
+        Path(self.home, ".profile").write_text('ls -A "$SSH_TOTE_HOME"; exit\n')
+        output = self.run_remote("/bin/sh", "true").stdout.splitlines()
+        self.assertIn("start", output)
+        self.assertNotIn("rc", output)
+
+    def test_killed_session_leaves_no_rcfile_behind(self):
+        command = 'echo "H=$SSH_TOTE_HOME"; kill -9 $PPID $$'
+        output = self.run_remote("/bin/sh", command).stdout.splitlines()
+        session_home = next(line[2:] for line in output if line.startswith("H="))
+        self.addCleanup(shutil.rmtree, session_home, True)
+        self.assertEqual(os.listdir(session_home), ["start"])
+
+    def test_rcfile_deletes_itself_under_the_plain_sh_fallback(self):
+        rcfile = Path(self.home, "rc")
+        rcfile.write_text(Session(self.items, self.home).rcfile())
+        # Interactive shells read $ENV, so a nested sh looks for the deleted file.
+        script = 'echo "T=$SSH_TOTE_TEST"\nsh -ic "echo nested-ok"\nexit\n'
+        environ = {
+            "HOME": self.home,
+            "PATH": os.environ["PATH"],
+            "ENV": str(rcfile),
+            "SSH_TOTE_HOME": self.home,
+            "TERM": "dumb",
+        }
+        # Its own session: an interactive shell would grab a terminal it can reach.
+        result = subprocess.run(
+            ["sh", "-i"],
+            input=script,
+            env=environ,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            start_new_session=True,
+        )
+        self.assertIn(f"T={TRICKY_VALUE}", result.stdout)
+        self.assertIn("nested-ok", result.stdout)
+        self.assertFalse(rcfile.exists())
+        self.assertNotIn(str(rcfile), result.stderr)
+
 
 class DotfilesDirTest(RemoteSessionTestCase):
     def setUp(self):
